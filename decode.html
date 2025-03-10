@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decode Hidden Message</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        canvas { display: none; }
+        img { max-width: 100%; height: auto; }
+    </style>
+</head>
+<body>
+    <h2>Decode Hidden Message from Image</h2>
+    
+    <input type="file" id="stegoImageInput" accept="image/*"><br><br>
+    <button onclick="decodeMessage()">Extract Hidden Message</button><br><br>
+    
+    <p id="decodedMessage" style="font-weight: bold; color: green;"></p>
+    
+    <canvas id="decodeCanvas"></canvas>
+    
+    <script>
+        function decodeMessage() {
+            let file = document.getElementById('stegoImageInput').files[0];
+            if (!file) {
+                alert("Please upload an image.");
+                return;
+            }
+
+            let reader = new FileReader();
+            reader.onload = function(event) {
+                let img = new Image();
+                img.src = event.target.result;
+                img.onload = function() {
+                    let canvas = document.getElementById('decodeCanvas');
+                    let ctx = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+
+                    let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    let qrCode = jsQR(imageData.data, canvas.width, canvas.height);
+                    
+                    if (qrCode) {
+                        document.getElementById('decodedMessage').innerText = "Hidden Message: " + qrCode.data;
+                    } else {
+                        alert("No hidden message found.");
+                    }
+                };
+            };
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+</html>
