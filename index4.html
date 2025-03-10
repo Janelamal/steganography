@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steganography with QR Code</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        canvas { display: none; }
+        img { max-width: 100%; height: auto; }
+    </style>
+</head>
+<body>
+    <h2>Steganography - Hide Secret Message in QR Code</h2>
+    
+    <input type="file" id="imageInput" accept="image/*"><br><br>
+    <textarea id="secretMessage" placeholder="Enter secret message"></textarea><br><br>
+    <button onclick="encodeMessage()">Hide Message</button><br><br>
+
+    <canvas id="canvas"></canvas><br><br>
+    <a id="downloadLink" style="display:none;">Download Stego Image</a><br><br>
+    <button id="shareButton" style="display:none;" onclick="shareOnWhatsApp()">Share via WhatsApp</button><br><br>
+
+    <script>
+        let stegoImageURL = "";  // Store uploaded image URL
+
+        function encodeMessage() {
+            let file = document.getElementById('imageInput').files[0];
+            let message = document.getElementById('secretMessage').value;
+
+            if (!file || !message) {
+                alert("Please upload an image and enter a message.");
+                return;
+            }
+
+            let reader = new FileReader();
+            reader.onload = function(event) {
+                let img = new Image();
+                img.src = event.target.result;
+                img.onload = function() {
+                    let canvas = document.getElementById('canvas');
+                    let ctx = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+
+                    // Generate QR Code with hidden message
+                    let qrCanvas = document.createElement('canvas');
+                    new QRCode(qrCanvas, {
+                        text: message,
+                        width: 200,  
+                        height: 200  
+                    });
+
+                    let qrImg = new Image();
+                    qrImg.src = qrCanvas.toDataURL();
+                    qrImg.onload = function() {
+                        // Embed QR Code at bottom-right of image
+                        ctx.drawImage(qrImg, img.width - 220, img.height - 220, 200, 200);
+
+                        let stegoData = canvas.toDataURL("image/png");
+
+                        // Download option
+                        let downloadLink = document.getElementById('downloadLink');
+                        downloadLink.href = stegoData;
+                        downloadLink.download = "stego-image.png";
+                        downloadLink.style.display = "block";
+
+                        document.getElementById('shareButton').style.display = "block";
+
+                        // Upload image to get shareable link
+                        uploadImage(stegoData);
+                    };
+                };
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function uploadImage(imageData) {
+            let formData = new FormData();
+            formData.append("image", imageData.split(',')[1]); // Remove data:image/png;base64
+
+            fetch("https://api.imgbb.com/1/upload?key=b4b016f92b1f2b7fb5e67b149774e932", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    stegoImageURL = data.data.url;
+                } else {
+                    alert("Error uploading image.");
+                }
+            })
+            .catch(error => console.error("Upload error:", error));
+        }
+
+        function shareOnWhatsApp() {
+            if (!stegoImageURL) {
+                alert("Please generate and upload the image first.");
+                return;
+            }
+
+            let decoderToolURL = "https://janelamal.github.io/steganography/";
+            let whatsappMessage = `Check this hidden message image: ${stegoImageURL} \n\nDecode it here: ${decoderToolURL}`;
+            let whatsappURL = `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;
+
+            window.open(whatsappURL, '_blank');
+        }
+    </script>
+</body>
+</html>
